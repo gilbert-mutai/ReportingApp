@@ -10,9 +10,11 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 # ---------------------------------------------------------------------------
 # Argument parsing (before heavy imports so --help is fast)
@@ -115,9 +117,11 @@ async def run(args: argparse.Namespace) -> int:
         return 0
 
     # --- Idempotency check ------------------------------------------------
-    generated_at = datetime.now(timezone.utc)
+    tz = ZoneInfo(cfg.report.timezone)
+    generated_at = datetime.now(tz)
     ts_str = generated_at.strftime("%Y%m%d_%H%M")
-    stem = f"report_{cfg.report.period}_{ts_str}"
+    safe_title = re.sub(r"[^\w\s-]", "", cfg.report.title).strip().replace(" ", "_")
+    stem = f"{safe_title}_{ts_str}"
     pdf_candidate = cfg.report.output_dir / f"{stem}.pdf"
 
     if pdf_candidate.exists():

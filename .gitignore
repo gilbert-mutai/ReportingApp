@@ -16,6 +16,9 @@ dist/
 build/
 
 
+# Assets (logo is binary — don't track in git, deploy manually)
+assets/
+
 # IDE
 .vscode/
 .idea/

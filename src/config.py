@@ -90,6 +90,8 @@ class ReportConfig:
     company_name: str
     include_html: bool
     notes: str
+    timezone: str           # e.g. Africa/Nairobi
+    logo_path: str          # absolute path to logo image, or "" if none
 
 
 @dataclass
@@ -144,10 +146,12 @@ class Config:
             period=_optional("REPORT_PERIOD", "weekly").lower(),
             output_dir=output_dir,
             dashboard_uids=_list("DASHBOARD_UIDS"),
-            title=_optional("REPORT_TITLE", "Server Monitoring Report"),
+            title=_optional("REPORT_TITLE", "Angani Internal Server Monitoring Report"),
             company_name=_optional("COMPANY_NAME", ""),
             include_html=_bool("INCLUDE_HTML_REPORT", False),
             notes=_optional("REPORT_NOTES", ""),
+            timezone=_optional("REPORT_TIMEZONE", "Africa/Nairobi"),
+            logo_path=_optional("COMPANY_LOGO", ""),
         )
 
         if not report.dashboard_uids:

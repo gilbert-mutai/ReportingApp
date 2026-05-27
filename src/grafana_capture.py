@@ -208,6 +208,35 @@ class GrafanaCapture:
             logger.debug("Navigating to dashboard: %s", url)
             await page.goto(url, wait_until="networkidle", timeout=60_000)
 
+            # Dismiss any Grafana modals / announcement popups (press Escape)
+            await page.keyboard.press("Escape")
+            await page.wait_for_timeout(500)
+
+            # Close "What's new" or similar overlay buttons if present
+            for selector in [
+                'button[aria-label="Close"]',
+                '[data-testid="whats-new-button"]',
+                'button:has-text("Got it")',
+                'button:has-text("Dismiss")',
+            ]:
+                try:
+                    btn = page.locator(selector).first
+                    if await btn.is_visible(timeout=1000):
+                        await btn.click()
+                        await page.wait_for_timeout(300)
+                except Exception:
+                    pass
+
+            # Detect "dashboard not found" — fail early with a clear message
+            page_title = await page.title()
+            current_url = page.url
+            if "not-found" in current_url or "Not Found" in page_title:
+                raise RuntimeError(
+                    f"Dashboard '{uid}' not found. Check that the reporter user "
+                    "has Viewer access to the folder containing this dashboard "
+                    "(Grafana → Administration → Folders → <folder> → Permissions)."
+                )
+
             # Wait for panels to finish loading (Grafana renders async)
             await page.wait_for_timeout(self._cfg.screenshot_delay)
 

@@ -60,14 +60,18 @@ class HtmlGenerator:
         if generated_at is None:
             generated_at = datetime.now(timezone.utc)
 
+        tz_name = generated_at.tzname() or "UTC"
+        logo_b64 = _b64_image(Path(self._cfg.logo_path)) if self._cfg.logo_path and Path(self._cfg.logo_path).exists() else None
+
         context = {
             "title": self._cfg.title,
             "company": self._cfg.company_name,
             "period": self._cfg.period,
-            "generated_at": generated_at.strftime("%Y-%m-%d %H:%M UTC"),
+            "generated_at": generated_at.strftime(f"%Y-%m-%d %H:%M {tz_name}"),
             "metrics": metrics,
             "screenshots": [str(p) for p in screenshot_paths if p.exists()],
             "notes": self._cfg.notes,
+            "logo_b64": logo_b64,
         }
 
         html = self._template.render(**context)

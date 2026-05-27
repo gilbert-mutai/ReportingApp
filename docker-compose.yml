@@ -24,6 +24,7 @@ services:
 
     volumes:
       - ./reports:/reports            # persist generated reports on host
+      - ./assets:/app/assets:ro       # company logo and other static assets
       # Uncomment to override templates without rebuilding the image:
       # - ./templates:/app/templates:ro
 

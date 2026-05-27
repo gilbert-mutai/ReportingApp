@@ -7,6 +7,7 @@ WeasyPrint handles embedded base64 images and CSS styling natively.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
@@ -40,7 +41,8 @@ class PdfGenerator:
             generated_at = datetime.now(timezone.utc)
 
         ts = generated_at.strftime("%Y%m%d_%H%M")
-        stem = f"report_{metrics.period_label}_{ts}"
+        safe_title = re.sub(r"[^\w\s-]", "", self._cfg.title).strip().replace(" ", "_")
+        stem = f"{safe_title}_{ts}"
 
         html_path = output_dir / f"{stem}.html"
         pdf_path = output_dir / f"{stem}.pdf"
