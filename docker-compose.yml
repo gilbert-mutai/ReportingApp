@@ -5,8 +5,6 @@
 # For scheduled runs, use systemd timers (see systemd/ directory).
 # docker-compose is useful for manual/test runs and local development.
 
-version: "3.9"
-
 services:
   reporter:
     build:
