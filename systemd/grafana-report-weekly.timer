@@ -13,18 +13,17 @@
 #   systemctl list-timers grafana-report-weekly.timer
 
 [Unit]
-Description=Grafana Monitoring Report — every 10 minutes (TEST MODE)
+Description=Weekly Grafana Monitoring Report — every Monday 08:00
 Documentation=https://github.com/yourorg/grafana-reporting-service
 After=network-online.target
 
 [Timer]
-# Every 10 minutes — for testing
-# Production: OnCalendar=Mon *-*-* 08:00:00
-OnCalendar=*:0/10
+# Every Monday at 08:00 local time
+OnCalendar=Mon *-*-* 08:00:00
 
 Persistent=true
-RandomizedDelaySec=0    # no random delay during testing
-AccuracySec=10
+RandomizedDelaySec=300
+AccuracySec=60
 
 Unit=grafana-report@weekly.service
 
