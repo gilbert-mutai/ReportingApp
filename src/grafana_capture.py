@@ -189,57 +189,81 @@ class GrafanaCapture:
         finally:
             await page.close()
 
+    async def _dismiss_modals(self, page: Page) -> None:
+        """Close any Grafana modal dialogs or announcement popups."""
+        # Press Escape up to 3 times — closes most overlay dialogs
+        for _ in range(3):
+            await page.keyboard.press("Escape")
+            await page.wait_for_timeout(300)
+
+        # Explicitly click close/dismiss buttons for known Grafana modals
+        close_selectors = [
+            # Generic close buttons
+            'button[aria-label="Close"]',
+            'button[aria-label="close"]',
+            # "What's new" / Grafana Assistant announcement dialog
+            '[data-testid="whats-new-dialog"] button',
+            'div[role="dialog"] button[aria-label="Close"]',
+            # Buttons with text labels
+            'button:has-text("Got it")',
+            'button:has-text("Dismiss")',
+            'button:has-text("Maybe later")',
+            'button:has-text("No thanks")',
+            'button:has-text("Skip")',
+        ]
+        for selector in close_selectors:
+            try:
+                btn = page.locator(selector).first
+                if await btn.is_visible(timeout=800):
+                    await btn.click()
+                    await page.wait_for_timeout(400)
+                    logger.debug("Dismissed modal via selector: %s", selector)
+            except Exception:
+                pass
+
+        # Final fallback: hide any remaining overlay via JavaScript
+        await page.evaluate("""
+            () => {
+                // Remove modal backdrops and dialogs
+                document.querySelectorAll(
+                    '[role="dialog"], .modal-backdrop, [class*="backdrop"]'
+                ).forEach(el => el.remove());
+            }
+        """)
+        await page.wait_for_timeout(300)
+
     async def _render_via_playwright(
         self, uid: str, output_path: Path, period: str
     ) -> None:
         """Screenshot a Grafana dashboard using Playwright (already logged in)."""
         from_ts, to_ts = self._time_range(period)
-        params = {
+
+        # Build base params — kiosk must be appended without a value (?kiosk not ?kiosk=)
+        # urlencode would produce kiosk= which Grafana ignores, so we append manually
+        params = urlencode({
             "orgId": self._cfg.org_id,
             "from": from_ts,
             "to": to_ts,
             "theme": self._cfg.theme,
-            "kiosk": "",          # hides navbar for cleaner screenshot
-        }
-        url = f"{self._cfg.url}/d/{uid}?{urlencode(params)}"
+        })
+        url = f"{self._cfg.url}/d/{uid}?{params}&kiosk"
 
         page: Page = await self._context.new_page()
         try:
             logger.debug("Navigating to dashboard: %s", url)
             await page.goto(url, wait_until="networkidle", timeout=60_000)
 
-            # Dismiss any Grafana modals / announcement popups (press Escape)
-            await page.keyboard.press("Escape")
-            await page.wait_for_timeout(500)
-
-            # Close "What's new" or similar overlay buttons if present
-            for selector in [
-                'button[aria-label="Close"]',
-                '[data-testid="whats-new-button"]',
-                'button:has-text("Got it")',
-                'button:has-text("Dismiss")',
-            ]:
-                try:
-                    btn = page.locator(selector).first
-                    if await btn.is_visible(timeout=1000):
-                        await btn.click()
-                        await page.wait_for_timeout(300)
-                except Exception:
-                    pass
-
             # Detect "dashboard not found" or wrong page — fail with a clear message
-            page_title = await page.title()
             current_url = page.url
-            # Grafana redirects to home if user lacks folder access
-            dashboard_loaded = f"/d/{uid}" in current_url
-            if not dashboard_loaded:
+            if f"/d/{uid}" not in current_url:
                 raise RuntimeError(
                     f"Dashboard '{uid}' did not load — landed on: {current_url}\n"
-                    "Most likely cause: the 'reporter' Grafana user does not have "
-                    "Viewer permission on the folder containing this dashboard.\n"
-                    "Fix: Grafana → Administration → Folders → [folder] → "
-                    "Manage permissions → Add reporter as Viewer."
+                    "Most likely cause: the Grafana user does not have Viewer "
+                    "permission on the folder containing this dashboard."
                 )
+
+            # Dismiss all modals aggressively before screenshotting
+            await self._dismiss_modals(page)
 
             # Wait for panels to finish loading (Grafana renders async)
             await page.wait_for_timeout(self._cfg.screenshot_delay)
