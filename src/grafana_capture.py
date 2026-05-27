@@ -227,14 +227,18 @@ class GrafanaCapture:
                 except Exception:
                     pass
 
-            # Detect "dashboard not found" — fail early with a clear message
+            # Detect "dashboard not found" or wrong page — fail with a clear message
             page_title = await page.title()
             current_url = page.url
-            if "not-found" in current_url or "Not Found" in page_title:
+            # Grafana redirects to home if user lacks folder access
+            dashboard_loaded = f"/d/{uid}" in current_url
+            if not dashboard_loaded:
                 raise RuntimeError(
-                    f"Dashboard '{uid}' not found. Check that the reporter user "
-                    "has Viewer access to the folder containing this dashboard "
-                    "(Grafana → Administration → Folders → <folder> → Permissions)."
+                    f"Dashboard '{uid}' did not load — landed on: {current_url}\n"
+                    "Most likely cause: the 'reporter' Grafana user does not have "
+                    "Viewer permission on the folder containing this dashboard.\n"
+                    "Fix: Grafana → Administration → Folders → [folder] → "
+                    "Manage permissions → Add reporter as Viewer."
                 )
 
             # Wait for panels to finish loading (Grafana renders async)
