@@ -1,0 +1,32 @@
+# /etc/systemd/system/grafana-report-monthly.timer
+#
+# Runs grafana-report@monthly.service on the 1st of each month at 08:00 local time.
+#
+# Install:
+#   sudo cp grafana-report-monthly.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now grafana-report-monthly.timer
+#
+# Verify:
+#   systemctl status grafana-report-monthly.timer
+#   systemctl list-timers grafana-report-monthly.timer
+
+[Unit]
+Description=Monthly Grafana Monitoring Report — 1st of month 08:00
+Documentation=https://github.com/yourorg/grafana-reporting-service
+After=network-online.target
+
+[Timer]
+# 1st day of every month at 08:00 local time
+OnCalendar=*-*-01 08:00:00
+
+# Catch up if system was offline on the 1st
+Persistent=true
+RandomizedDelaySec=300
+AccuracySec=60
+
+# The service instance name "monthly" is passed as %i to the template service
+Unit=grafana-report@monthly.service
+
+[Install]
+WantedBy=timers.target

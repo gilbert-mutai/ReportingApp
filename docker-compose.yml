@@ -1,0 +1,64 @@
+---
+# Grafana Reporting Service — docker-compose.yml
+# Run: docker compose run --rm reporter --period weekly
+#
+# For scheduled runs, use systemd timers (see systemd/ directory).
+# docker-compose is useful for manual/test runs and local development.
+
+version: "3.9"
+
+services:
+  reporter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: grafana-reporting-service:latest
+    container_name: grafana-reporter
+    restart: "no"                     # systemd controls scheduling
+
+    env_file:
+      - .env                          # all secrets live here
+
+    environment:
+      # These can also be set in .env — env vars take precedence
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - REPORT_OUTPUT_DIR=/reports
+
+    volumes:
+      - ./reports:/reports            # persist generated reports on host
+      # Uncomment to override templates without rebuilding the image:
+      # - ./templates:/app/templates:ro
+
+    # Allows the container to reach services running directly on the host
+    # (Grafana and Prometheus on the host become reachable as host.docker.internal)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    # Playwright needs /dev/shm large enough for Chromium
+    shm_size: "256m"
+
+    # Drop all capabilities; Chromium --no-sandbox runs fine without them
+    cap_drop:
+      - ALL
+
+    security_opt:
+      - no-new-privileges:true
+
+    # Resource limits (adjust to your server capacity)
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          memory: 256M
+
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    # Attach to your existing monitoring stack if Grafana/Prometheus
+    # are already in a named Docker network; otherwise use the default bridge.
+    external: false
+    name: monitoring

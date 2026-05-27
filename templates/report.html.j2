@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title }} — {{ generated_at }}</title>
+  <style>
+    /* ------------------------------------------------------------------ */
+    /* Base                                                                  */
+    /* ------------------------------------------------------------------ */
+    @page {
+      size: A4;
+      margin: 20mm 18mm 20mm 18mm;
+      @top-center { content: "{{ title }}"; font-size: 9pt; color: #666; }
+      @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 9pt; color: #666; }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 11pt;
+      color: #1a1a2e;
+      background: #fff;
+      line-height: 1.5;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Cover page                                                            */
+    /* ------------------------------------------------------------------ */
+    .cover {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 240mm;
+      page-break-after: always;
+      text-align: center;
+      padding: 30mm 0;
+    }
+
+    .cover-badge {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #4361ee, #7209b7);
+      border-radius: 16px;
+      margin: 0 auto 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      color: white;
+    }
+
+    .cover h1 {
+      font-size: 26pt;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 8px;
+    }
+
+    .cover h2 {
+      font-size: 16pt;
+      font-weight: 400;
+      color: #4361ee;
+      margin-bottom: 32px;
+    }
+
+    .cover .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 24px;
+      max-width: 360px;
+      margin: 0 auto;
+      text-align: left;
+    }
+
+    .cover .meta-label { font-size: 8pt; color: #888; text-transform: uppercase; letter-spacing: 0.06em; }
+    .cover .meta-value { font-size: 11pt; font-weight: 600; color: #1a1a2e; }
+
+    /* ------------------------------------------------------------------ */
+    /* Section headings                                                      */
+    /* ------------------------------------------------------------------ */
+    h3 {
+      font-size: 14pt;
+      font-weight: 700;
+      color: #4361ee;
+      margin: 24px 0 12px;
+      padding-bottom: 4px;
+      border-bottom: 2px solid #e8ecff;
+    }
+
+    h4 {
+      font-size: 11pt;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin: 16px 0 8px;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Metrics cards grid                                                    */
+    /* ------------------------------------------------------------------ */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 16px 0 24px;
+    }
+
+    .metric-card {
+      background: #f7f8ff;
+      border: 1px solid #e0e4f8;
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .metric-card .label {
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .metric-card .value {
+      font-size: 18pt;
+      font-weight: 700;
+      color: #1a1a2e;
+      line-height: 1.2;
+    }
+
+    .metric-card .unit { font-size: 10pt; font-weight: 400; color: #666; }
+
+    .metric-card.alert  { border-left: 4px solid #e63946; }
+    .metric-card.warn   { border-left: 4px solid #f4a261; }
+    .metric-card.ok     { border-left: 4px solid #2dc653; }
+
+    /* ------------------------------------------------------------------ */
+    /* Metrics detail table                                                  */
+    /* ------------------------------------------------------------------ */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 20px;
+      font-size: 10pt;
+    }
+
+    thead th {
+      background: #4361ee;
+      color: #fff;
+      font-weight: 600;
+      text-align: left;
+      padding: 8px 12px;
+    }
+
+    tbody tr:nth-child(even) { background: #f7f8ff; }
+
+    tbody td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #e8ecff;
+      vertical-align: middle;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 8.5pt;
+      font-weight: 600;
+    }
+
+    .badge-ok    { background: #d4f7dc; color: #1a7431; }
+    .badge-warn  { background: #fff3e0; color: #8a4a00; }
+    .badge-alert { background: #fde8e8; color: #900; }
+
+    /* ------------------------------------------------------------------ */
+    /* Screenshots                                                           */
+    /* ------------------------------------------------------------------ */
+    .screenshot-wrap {
+      page-break-inside: avoid;
+      margin: 16px 0 28px;
+    }
+
+    .screenshot-wrap img {
+      width: 100%;
+      border: 1px solid #e0e4f8;
+      border-radius: 8px;
+      display: block;
+    }
+
+    .screenshot-caption {
+      font-size: 8.5pt;
+      color: #888;
+      margin-top: 6px;
+      text-align: center;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Errors / warnings callout                                             */
+    /* ------------------------------------------------------------------ */
+    .callout {
+      background: #fff8e1;
+      border-left: 4px solid #f4a261;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin: 16px 0;
+      font-size: 9.5pt;
+      color: #5c4000;
+    }
+
+    .callout ul { margin: 6px 0 0 18px; }
+
+    /* ------------------------------------------------------------------ */
+    /* Notes section                                                         */
+    /* ------------------------------------------------------------------ */
+    .notes-box {
+      background: #f7f8ff;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+      font-size: 10pt;
+      white-space: pre-wrap;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Footer                                                                */
+    /* ------------------------------------------------------------------ */
+    .report-footer {
+      margin-top: 32px;
+      padding-top: 12px;
+      border-top: 1px solid #e8ecff;
+      font-size: 8pt;
+      color: #aaa;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================ COVER -->
+<div class="cover">
+  <div class="cover-badge">&#9741;</div>
+  <h1>{{ title }}</h1>
+  <h2>{{ period | capitalize }} Report</h2>
+
+  <div class="meta-grid">
+    {% if company %}
+    <div>
+      <div class="meta-label">Organisation</div>
+      <div class="meta-value">{{ company }}</div>
+    </div>
+    {% endif %}
+    <div>
+      <div class="meta-label">Report Period</div>
+      <div class="meta-value">{{ period | capitalize }}</div>
+    </div>
+    <div>
+      <div class="meta-label">Generated</div>
+      <div class="meta-value">{{ generated_at }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ METRICS SUMMARY -->
+<h3>Executive Summary</h3>
+
+<div class="metrics-grid">
+
+  {% set cpu_class = "alert" if metrics.cpu_avg > 80 else ("warn" if metrics.cpu_avg > 60 else "ok") %}
+  <div class="metric-card {{ cpu_class }}">
+    <div class="label">Avg CPU Usage</div>
+    <div class="value">{{ metrics.cpu_avg }}<span class="unit">%</span></div>
+  </div>
+
+  {% set mem_class = "alert" if metrics.memory_avg > 85 else ("warn" if metrics.memory_avg > 70 else "ok") %}
+  <div class="metric-card {{ mem_class }}">
+    <div class="label">Avg Memory</div>
+    <div class="value">{{ metrics.memory_avg }}<span class="unit">%</span></div>
+  </div>
+
+  {% set disk_class = "alert" if metrics.disk_usage > 85 else ("warn" if metrics.disk_usage > 70 else "ok") %}
+  <div class="metric-card {{ disk_class }}">
+    <div class="label">Disk Usage</div>
+    <div class="value">{{ metrics.disk_usage }}<span class="unit">%</span></div>
+  </div>
+
+  {% set up_class = "alert" if metrics.uptime_pct < 99 else ("warn" if metrics.uptime_pct < 99.9 else "ok") %}
+  <div class="metric-card {{ up_class }}">
+    <div class="label">Uptime</div>
+    <div class="value">{{ metrics.uptime_pct }}<span class="unit">%</span></div>
+  </div>
+
+</div>
+
+<!-- ============================================================ METRICS TABLE -->
+<h3>Detailed Metrics</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Metric</th>
+      <th>Average</th>
+      <th>Peak</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>CPU Usage</td>
+      <td>{{ metrics.cpu_avg }}%</td>
+      <td>{{ metrics.cpu_max }}%</td>
+      <td>
+        {% if metrics.cpu_avg > 80 %}
+          <span class="badge badge-alert">Critical</span>
+        {% elif metrics.cpu_avg > 60 %}
+          <span class="badge badge-warn">Warning</span>
+        {% else %}
+          <span class="badge badge-ok">Normal</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td>Memory Usage</td>
+      <td>{{ metrics.memory_avg }}%</td>
+      <td>{{ metrics.memory_max }}%</td>
+      <td>
+        {% if metrics.memory_avg > 85 %}
+          <span class="badge badge-alert">Critical</span>
+        {% elif metrics.memory_avg > 70 %}
+          <span class="badge badge-warn">Warning</span>
+        {% else %}
+          <span class="badge badge-ok">Normal</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td>Disk Usage (root)</td>
+      <td>{{ metrics.disk_usage }}%</td>
+      <td>—</td>
+      <td>
+        {% if metrics.disk_usage > 85 %}
+          <span class="badge badge-alert">Critical</span>
+        {% elif metrics.disk_usage > 70 %}
+          <span class="badge badge-warn">Warning</span>
+        {% else %}
+          <span class="badge badge-ok">Normal</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td>Server Uptime</td>
+      <td>{{ metrics.uptime_pct }}%</td>
+      <td>—</td>
+      <td>
+        {% if metrics.uptime_pct < 99 %}
+          <span class="badge badge-alert">Degraded</span>
+        {% elif metrics.uptime_pct < 99.9 %}
+          <span class="badge badge-warn">Reduced</span>
+        {% else %}
+          <span class="badge badge-ok">Excellent</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td>Load Average (1m / 15m)</td>
+      <td>{{ metrics.load_avg_1m }} / {{ metrics.load_avg_15m }}</td>
+      <td>—</td>
+      <td>
+        {% if metrics.load_avg_1m > 4 %}
+          <span class="badge badge-alert">High</span>
+        {% elif metrics.load_avg_1m > 2 %}
+          <span class="badge badge-warn">Elevated</span>
+        {% else %}
+          <span class="badge badge-ok">Normal</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td>Network RX (avg rate)</td>
+      <td>{{ metrics.network_rx_bytes | bytes_human }}</td>
+      <td>—</td>
+      <td><span class="badge badge-ok">Info</span></td>
+    </tr>
+    <tr>
+      <td>Network TX (avg rate)</td>
+      <td>{{ metrics.network_tx_bytes | bytes_human }}</td>
+      <td>—</td>
+      <td><span class="badge badge-ok">Info</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ COLLECTION WARNINGS -->
+{% if metrics.errors %}
+<div class="callout">
+  <strong>Some metrics were unavailable during collection:</strong>
+  <ul>
+    {% for err in metrics.errors %}
+    <li>{{ err }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<!-- ============================================================ DASHBOARD SCREENSHOTS -->
+{% if screenshots %}
+<h3>Dashboard Screenshots</h3>
+{% for shot in screenshots %}
+<div class="screenshot-wrap">
+  <img src="{{ shot | b64image }}" alt="Grafana Dashboard Screenshot" />
+  <div class="screenshot-caption">
+    Dashboard snapshot — {{ generated_at }}
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- ============================================================ NOTES -->
+{% if notes %}
+<h3>Notes</h3>
+<div class="notes-box">{{ notes }}</div>
+{% endif %}
+
+<!-- ============================================================ FOOTER -->
+<div class="report-footer">
+  Generated by Grafana Reporting Service &nbsp;|&nbsp; {{ generated_at }}
+</div>
+
+</body>
+</html>

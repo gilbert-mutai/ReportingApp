@@ -1,0 +1,62 @@
+# /etc/systemd/system/grafana-report.service
+#
+# Runs the Grafana Reporting Service inside Docker.
+# Triggered by grafana-report-weekly.timer or grafana-report-monthly.timer.
+#
+# Install:
+#   sudo cp grafana-report.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+
+[Unit]
+Description=Grafana Reporting Service
+Documentation=https://github.com/yourorg/grafana-reporting-service
+After=docker.service network-online.target
+Requires=docker.service
+# If your Grafana/Prometheus are also Docker services, add them here:
+# After=docker-compose@monitoring.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+
+# ---- Environment -------------------------------------------------------
+# Path to the project directory containing .env and docker-compose.yml
+WorkingDirectory=/opt/grafana-reporting-service
+EnvironmentFile=/opt/grafana-reporting-service/.env
+
+# ---- Pre-flight: ensure reports directory exists -----------------------
+ExecStartPre=/bin/mkdir -p /opt/grafana-reporting-service/reports
+
+# ---- Pull latest image (optional — remove if not using a registry) -----
+# ExecStartPre=/usr/bin/docker compose pull reporter --quiet
+
+# ---- Run the reporter --------------------------------------------------
+# REPORT_PERIOD is passed as CLI argument; override per-timer using
+# a drop-in file: /etc/systemd/system/grafana-report.service.d/period.conf
+ExecStart=/usr/bin/docker compose \
+    --file /opt/grafana-reporting-service/docker-compose.yml \
+    run \
+    --rm \
+    --no-TTY \
+    reporter \
+    --period %i
+
+# ---- Cleanup on failure -------------------------------------------------
+ExecStopPost=/bin/sh -c 'journalctl -u grafana-report@%i --no-pager -n 50'
+
+# ---- Timeouts ----------------------------------------------------------
+TimeoutStartSec=600
+TimeoutStopSec=60
+
+# ---- Logging -----------------------------------------------------------
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=grafana-reporter
+
+# ---- Restart policy ----------------------------------------------------
+# oneshot services don't restart automatically; use Restart=on-failure
+# only if you want the timer to retry on transient errors.
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

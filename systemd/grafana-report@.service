@@ -1,0 +1,46 @@
+# /etc/systemd/system/grafana-report@.service
+#
+# Template service — the instance name (%i) is the report period.
+# Instantiated as:
+#   grafana-report@weekly.service   (by grafana-report-weekly.timer)
+#   grafana-report@monthly.service  (by grafana-report-monthly.timer)
+#
+# Install:
+#   sudo cp "grafana-report@.service" /etc/systemd/system/
+#   sudo systemctl daemon-reload
+
+[Unit]
+Description=Grafana Reporting Service (%i)
+Documentation=https://github.com/yourorg/grafana-reporting-service
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+
+WorkingDirectory=/opt/grafana-reporting-service
+EnvironmentFile=/opt/grafana-reporting-service/.env
+
+ExecStartPre=/bin/mkdir -p /opt/grafana-reporting-service/reports
+
+ExecStart=/usr/bin/docker compose \
+    --file /opt/grafana-reporting-service/docker-compose.yml \
+    run \
+    --rm \
+    --no-TTY \
+    reporter \
+    --period %i
+
+TimeoutStartSec=600
+TimeoutStopSec=60
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=grafana-reporter-%i
+
+# Do not auto-restart oneshot services — the timer will retry next period
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
