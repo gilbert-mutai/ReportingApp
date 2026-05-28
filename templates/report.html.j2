@@ -402,7 +402,7 @@
 
   {% if metrics.top_cpu %}
   <div>
-    <h4>CPU Usage (avg over period)</h4>
+    <h4>CPU Usage (avg over 7 Days)</h4>
     <table>
       <thead><tr><th>Server</th><th style="text-align:right;">Avg CPU</th><th>Status</th></tr></thead>
       <tbody>
@@ -424,7 +424,7 @@
 
   {% if metrics.top_memory %}
   <div>
-    <h4>Memory Usage (avg over period)</h4>
+    <h4>Memory Usage (avg over 7 Days)</h4>
     <table>
       <thead><tr><th>Server</th><th style="text-align:right;">Avg Memory</th><th>Status</th></tr></thead>
       <tbody>
@@ -500,12 +500,12 @@
 
 <!-- ============================================================ DASHBOARD SCREENSHOTS -->
 {% if screenshots %}
-<h3>Dashboard Screenshots</h3>
+<h3>Dashboard (Current Metrics)</h3>
 {% for shot in screenshots %}
 <div class="screenshot-wrap">
   <img src="{{ shot | b64image }}" alt="Grafana Dashboard Screenshot" />
   <div class="screenshot-caption">
-    Dashboard snapshot — {{ generated_at }}
+    Live dashboard — {{ generated_at }}
   </div>
 </div>
 {% endfor %}
