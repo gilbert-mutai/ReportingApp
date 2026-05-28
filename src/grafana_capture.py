@@ -304,23 +304,26 @@ class GrafanaCapture:
             """)
             await page.wait_for_timeout(300)
 
-            # First viewport expansion — makes Grafana render off-screen panels
-            content_height = await page.evaluate("() => document.body.scrollHeight")
-            page_height = max(content_height, self._cfg.height)
+            # Grafana renders panels inside a custom scroll container, so
+            # document.body.scrollHeight is capped at the viewport height and
+            # doesn't reflect the full dashboard content.
+            # Solution: read the react-grid-layout's own scrollHeight (which
+            # spans all panels) and force body.minHeight to match so that
+            # Playwright's full_page calculation uses the real content height.
+            page_height = await page.evaluate("""
+                () => {
+                    let h = document.body.scrollHeight;
+                    const grid = document.querySelector('[class*="react-grid-layout"]');
+                    if (grid && grid.scrollHeight > h) h = grid.scrollHeight;
+                    // Expand body so Playwright's full_page captures everything
+                    document.body.style.setProperty('min-height', h + 'px', 'important');
+                    document.documentElement.style.setProperty('min-height', h + 'px', 'important');
+                    return h;
+                }
+            """)
+            page_height = max(page_height, self._cfg.height)
             await page.set_viewport_size({"width": self._cfg.width, "height": page_height})
-
-            # Wait for any newly-visible panels to finish rendering, then
-            # re-measure — Grafana lazy-loads panels as the viewport grows so
-            # the first scrollHeight is always smaller than the final one.
-            await page.wait_for_timeout(1500)
-            content_height = await page.evaluate("() => document.body.scrollHeight")
-            if content_height > page_height:
-                page_height = content_height
-                await page.set_viewport_size({"width": self._cfg.width, "height": page_height})
-                await page.wait_for_timeout(800)
-
-            # Final height after all panels are visible
-            page_height = await page.evaluate("() => document.body.scrollHeight")
+            await page.wait_for_timeout(500)
 
             # Find the dashboard grid origin to crop out residual nav chrome.
             crop = await page.evaluate("""
@@ -344,7 +347,6 @@ class GrafanaCapture:
             """)
 
             if crop:
-                # full_page=True captures all content; clip removes the nav strip
                 await page.screenshot(
                     path=str(output_path),
                     full_page=True,
