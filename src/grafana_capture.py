@@ -276,24 +276,22 @@ class GrafanaCapture:
             except Exception:
                 pass  # No loading indicators present — that's fine
 
-            # Hide Grafana nav chrome after panels have rendered.
-            # Only hide — do NOT modify main content dimensions or the grid layout breaks.
+            # Best-effort: hide known nav chrome by element type / role / class fragments.
+            # Grafana 10 uses emotion-generated class names so this may not catch everything;
+            # the crop step below handles whatever remains.
             await page.evaluate("""
                 () => {
-                    // Hide by element type / role / known class fragments
                     document.querySelectorAll(
                         'nav, header, aside, ' +
                         '[role="navigation"], [role="banner"], ' +
-                        '[class*="sidemenu"], [class*="SideMenu"], ' +
-                        '[class*="navbar"], [class*="NavBar"], ' +
-                        '[class*="nav-bar"], [class*="topnav"], ' +
+                        '[class*="sidemenu"], [class*="SideMenu"], [class*="sidebar"], ' +
+                        '[class*="navbar"], [class*="NavBar"], [class*="nav-bar"], ' +
+                        '[class*="topnav"], [class*="MegaMenu"], ' +
                         '[class*="page-toolbar"], [class*="toolbar"], ' +
                         '[data-testid="nav-menu-portal"]'
                     ).forEach(el => {
                         el.style.setProperty('display', 'none', 'important');
                     });
-
-                    // Catch any remaining fixed/sticky bars pinned to the top
                     document.querySelectorAll('body *').forEach(el => {
                         const s = window.getComputedStyle(el);
                         const r = el.getBoundingClientRect();
@@ -306,18 +304,49 @@ class GrafanaCapture:
             """)
             await page.wait_for_timeout(300)
 
-            # Expand to full content height
-            content_height = await page.evaluate(
-                "() => document.body.scrollHeight"
-            )
-            await page.set_viewport_size(
-                {"width": self._cfg.width, "height": max(content_height, self._cfg.height)}
-            )
+            # Expand viewport to full page height so all panels are visible
+            content_height = await page.evaluate("() => document.body.scrollHeight")
+            page_height = max(content_height, self._cfg.height)
+            await page.set_viewport_size({"width": self._cfg.width, "height": page_height})
 
-            await page.screenshot(
-                path=str(output_path),
-                full_page=True,
-                type="png",
-            )
+            # Crop to the dashboard grid origin — removes any residual nav chrome
+            # regardless of Grafana version / class naming convention.
+            crop = await page.evaluate("""
+                () => {
+                    for (const sel of [
+                        '[class*="react-grid-layout"]',
+                        '[class*="panel-container"]',
+                        '[class*="dashboard-row"]',
+                        '[class*="dashboard-content"]',
+                    ]) {
+                        const el = document.querySelector(sel);
+                        if (el) {
+                            const r = el.getBoundingClientRect();
+                            const x = Math.max(0, Math.floor(r.left) - 8);
+                            const y = Math.max(0, Math.floor(r.top) - 8);
+                            if (x > 20 || y > 20) return { x, y };
+                        }
+                    }
+                    return null;
+                }
+            """)
+
+            if crop:
+                await page.screenshot(
+                    path=str(output_path),
+                    type="png",
+                    clip={
+                        "x": crop["x"],
+                        "y": crop["y"],
+                        "width": self._cfg.width - crop["x"],
+                        "height": page_height - crop["y"],
+                    },
+                )
+            else:
+                await page.screenshot(
+                    path=str(output_path),
+                    full_page=True,
+                    type="png",
+                )
         finally:
             await page.close()
