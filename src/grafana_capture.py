@@ -304,13 +304,25 @@ class GrafanaCapture:
             """)
             await page.wait_for_timeout(300)
 
-            # Expand viewport to full page height so all panels are visible
+            # First viewport expansion — makes Grafana render off-screen panels
             content_height = await page.evaluate("() => document.body.scrollHeight")
             page_height = max(content_height, self._cfg.height)
             await page.set_viewport_size({"width": self._cfg.width, "height": page_height})
 
-            # Crop to the dashboard grid origin — removes any residual nav chrome
-            # regardless of Grafana version / class naming convention.
+            # Wait for any newly-visible panels to finish rendering, then
+            # re-measure — Grafana lazy-loads panels as the viewport grows so
+            # the first scrollHeight is always smaller than the final one.
+            await page.wait_for_timeout(1500)
+            content_height = await page.evaluate("() => document.body.scrollHeight")
+            if content_height > page_height:
+                page_height = content_height
+                await page.set_viewport_size({"width": self._cfg.width, "height": page_height})
+                await page.wait_for_timeout(800)
+
+            # Final height after all panels are visible
+            page_height = await page.evaluate("() => document.body.scrollHeight")
+
+            # Find the dashboard grid origin to crop out residual nav chrome.
             crop = await page.evaluate("""
                 () => {
                     for (const sel of [
@@ -332,8 +344,10 @@ class GrafanaCapture:
             """)
 
             if crop:
+                # full_page=True captures all content; clip removes the nav strip
                 await page.screenshot(
                     path=str(output_path),
+                    full_page=True,
                     type="png",
                     clip={
                         "x": crop["x"],
