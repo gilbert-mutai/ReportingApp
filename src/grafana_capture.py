@@ -280,13 +280,27 @@ class GrafanaCapture:
             # Only hide — do NOT modify main content dimensions or the grid layout breaks.
             await page.evaluate("""
                 () => {
+                    // Hide by element type / role / known class fragments
                     document.querySelectorAll(
-                        'nav, [role="navigation"], [role="banner"], ' +
-                        '[class*="sidemenu"], [class*="navbar"], [class*="nav-bar"], ' +
-                        '[class*="topnav"], [class*="page-toolbar"], ' +
+                        'nav, header, aside, ' +
+                        '[role="navigation"], [role="banner"], ' +
+                        '[class*="sidemenu"], [class*="SideMenu"], ' +
+                        '[class*="navbar"], [class*="NavBar"], ' +
+                        '[class*="nav-bar"], [class*="topnav"], ' +
+                        '[class*="page-toolbar"], [class*="toolbar"], ' +
                         '[data-testid="nav-menu-portal"]'
                     ).forEach(el => {
                         el.style.setProperty('display', 'none', 'important');
+                    });
+
+                    // Catch any remaining fixed/sticky bars pinned to the top
+                    document.querySelectorAll('body *').forEach(el => {
+                        const s = window.getComputedStyle(el);
+                        const r = el.getBoundingClientRect();
+                        if ((s.position === 'fixed' || s.position === 'sticky') &&
+                                r.top < 120 && r.height > 0 && r.height < 120) {
+                            el.style.setProperty('display', 'none', 'important');
+                        }
                     });
                 }
             """)
