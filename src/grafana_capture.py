@@ -265,25 +265,6 @@ class GrafanaCapture:
             # Dismiss all modals aggressively before screenshotting
             await self._dismiss_modals(page)
 
-            # Hide Grafana sidebar / nav for a clean dashboard-only screenshot
-            await page.evaluate("""
-                () => {
-                    const hide = sel => document.querySelectorAll(sel).forEach(el => {
-                        el.style.setProperty('display', 'none', 'important');
-                    });
-                    const expand = sel => document.querySelectorAll(sel).forEach(el => {
-                        el.style.setProperty('margin-left', '0', 'important');
-                        el.style.setProperty('width', '100%', 'important');
-                        el.style.setProperty('padding-left', '0', 'important');
-                    });
-                    // Nav sidebar and top bar
-                    hide('nav, [role="navigation"], [class*="sidemenu"], [class*="navbar"], [class*="nav-bar"], [class*="page-toolbar"], [data-testid="nav-menu-portal"]');
-                    // Expand main content area to fill the full width
-                    expand('main, [role="main"], [class*="page-content"], [class*="main-view"], .grafana-app > div > div');
-                }
-            """)
-            await page.wait_for_timeout(500)
-
             # Wait for panels to finish loading (Grafana renders async)
             await page.wait_for_timeout(self._cfg.screenshot_delay)
 
@@ -294,6 +275,22 @@ class GrafanaCapture:
                 )
             except Exception:
                 pass  # No loading indicators present — that's fine
+
+            # Hide Grafana nav chrome after panels have rendered.
+            # Only hide — do NOT modify main content dimensions or the grid layout breaks.
+            await page.evaluate("""
+                () => {
+                    document.querySelectorAll(
+                        'nav, [role="navigation"], [role="banner"], ' +
+                        '[class*="sidemenu"], [class*="navbar"], [class*="nav-bar"], ' +
+                        '[class*="topnav"], [class*="page-toolbar"], ' +
+                        '[data-testid="nav-menu-portal"]'
+                    ).forEach(el => {
+                        el.style.setProperty('display', 'none', 'important');
+                    });
+                }
+            """)
+            await page.wait_for_timeout(300)
 
             # Expand to full content height
             content_height = await page.evaluate(
