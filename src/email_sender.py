@@ -49,31 +49,105 @@ def _build_body(
     company: str = "",
 ) -> str:
     label = _period_label(period)
-    header = f"{company} — " if company else ""
-    lines = [
-        f"{header}{label} Server Monitoring Report",
-        f"Generated: {generated_at.strftime('%Y-%m-%d %H:%M UTC')}",
-        "",
-        "Please find the automated monitoring report attached.",
-        "",
-        "This report includes:",
-        "  • Grafana dashboard screenshots",
-        "  • CPU, memory, disk and network metrics summary",
-        "  • Server uptime statistics",
-        "",
-    ]
+    generated_str = generated_at.strftime("%d %B %Y, %H:%M")
+
+    errors_block = ""
     if metrics_errors:
-        lines += [
-            "Note: Some metrics could not be collected:",
-            *[f"  - {e}" for e in metrics_errors],
-            "",
-        ]
-    lines += [
-        "--",
-        "Grafana Reporting Service",
-        "This is an automated message. Do not reply.",
-    ]
-    return "\n".join(lines)
+        items = "".join(f"<li>{e}</li>" for e in metrics_errors)
+        errors_block = f"""
+        <tr><td style="padding:0 32px 16px;">
+          <p style="margin:0 0 6px;font-size:13px;color:#856404;background:#fff3cd;
+                    border-left:4px solid #ffc107;padding:10px 14px;border-radius:4px;">
+            <strong>Note:</strong> Some metrics could not be collected:
+          </p>
+          <ul style="margin:4px 0 0 20px;font-size:13px;color:#856404;">{items}</ul>
+        </td></tr>"""
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#f4f6fb;font-family:'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;padding:32px 0;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0"
+           style="background:#ffffff;border-radius:10px;overflow:hidden;
+                  box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+      <!-- Header bar -->
+      <tr>
+        <td style="background:linear-gradient(135deg,#4361ee,#7209b7);
+                   padding:28px 32px;text-align:center;">
+          <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.7);
+                    text-transform:uppercase;letter-spacing:0.08em;">
+            {company + " &mdash; " if company else ""}{label} Report
+          </p>
+          <h1 style="margin:6px 0 0;font-size:20px;font-weight:700;color:#ffffff;">
+            Server Monitoring Report
+          </h1>
+          <p style="margin:6px 0 0;font-size:12px;color:rgba(255,255,255,0.65);">
+            Generated {generated_str}
+          </p>
+        </td>
+      </tr>
+
+      <!-- Greeting -->
+      <tr><td style="padding:28px 32px 8px;">
+        <p style="margin:0;font-size:15px;color:#1a1a2e;">Hello Team,</p>
+      </td></tr>
+
+      <!-- Body text -->
+      <tr><td style="padding:12px 32px 8px;">
+        <p style="margin:0;font-size:14px;color:#333;line-height:1.6;">
+          Please find the automated monitoring report attached.
+        </p>
+      </td></tr>
+
+      <!-- Bullet list -->
+      <tr><td style="padding:8px 32px 16px;">
+        <p style="margin:0 0 10px;font-size:14px;color:#333;">This report includes:</p>
+        <table cellpadding="0" cellspacing="0">
+          <tr><td style="padding:4px 0;font-size:14px;color:#333;">
+            <span style="color:#4361ee;font-weight:700;margin-right:8px;">&#8226;</span>
+            Grafana Dashboards
+          </td></tr>
+          <tr><td style="padding:4px 0;font-size:14px;color:#333;">
+            <span style="color:#4361ee;font-weight:700;margin-right:8px;">&#8226;</span>
+            CPU, memory, disk and network metrics summary
+          </td></tr>
+          <tr><td style="padding:4px 0;font-size:14px;color:#333;">
+            <span style="color:#4361ee;font-weight:700;margin-right:8px;">&#8226;</span>
+            Server uptime statistics
+          </td></tr>
+        </table>
+      </td></tr>
+
+      {errors_block}
+
+      <!-- Divider -->
+      <tr><td style="padding:0 32px;">
+        <hr style="border:none;border-top:1px solid #e8ecff;margin:0;"/>
+      </td></tr>
+
+      <!-- Sign-off -->
+      <tr><td style="padding:20px 32px 8px;">
+        <p style="margin:0;font-size:14px;color:#333;">Regards,</p>
+        <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#1a1a2e;">
+          Grafana Reporting Service
+        </p>
+      </td></tr>
+
+      <!-- Footer -->
+      <tr><td style="padding:12px 32px 28px;">
+        <p style="margin:0;font-size:11px;color:#aaa;font-style:italic;">
+          This is an automated message. Do not reply.
+        </p>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>"""
 
 
 class EmailSender:
@@ -134,7 +208,7 @@ class EmailSender:
         message = {
             "subject": subject,
             "body": {
-                "contentType": "Text",
+                "contentType": "HTML",
                 "content": body,
             },
             "toRecipients": [
