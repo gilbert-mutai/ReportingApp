@@ -132,7 +132,7 @@ def _build_body(
       <tr><td style="padding:20px 32px 8px;">
         <p style="margin:0;font-size:14px;color:#333;">Regards,</p>
         <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#1a1a2e;">
-          Grafana Reporting Service
+          Angani Reporting Service
         </p>
       </td></tr>
 
