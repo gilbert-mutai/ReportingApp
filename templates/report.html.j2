@@ -394,6 +394,98 @@
   </tbody>
 </table>
 
+<!-- ============================================================ PER-SERVER RANKINGS -->
+{% if metrics.top_cpu or metrics.top_memory or metrics.top_disk or metrics.top_network %}
+<h3>Per-Server Rankings</h3>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin:16px 0 24px;">
+
+  {% if metrics.top_cpu %}
+  <div>
+    <h4>CPU Usage (avg over period)</h4>
+    <table>
+      <thead><tr><th>Server</th><th style="text-align:right;">Avg CPU</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for rank in metrics.top_cpu %}
+        <tr>
+          <td>{{ rank.display }}</td>
+          <td style="text-align:right;">{{ rank.value }}%</td>
+          <td>
+            {% if rank.value > 80 %}<span class="badge badge-alert">Critical</span>
+            {% elif rank.value > 60 %}<span class="badge badge-warn">Warning</span>
+            {% else %}<span class="badge badge-ok">Normal</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if metrics.top_memory %}
+  <div>
+    <h4>Memory Usage (avg over period)</h4>
+    <table>
+      <thead><tr><th>Server</th><th style="text-align:right;">Avg Memory</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for rank in metrics.top_memory %}
+        <tr>
+          <td>{{ rank.display }}</td>
+          <td style="text-align:right;">{{ rank.value }}%</td>
+          <td>
+            {% if rank.value > 85 %}<span class="badge badge-alert">Critical</span>
+            {% elif rank.value > 70 %}<span class="badge badge-warn">Warning</span>
+            {% else %}<span class="badge badge-ok">Normal</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if metrics.top_disk %}
+  <div>
+    <h4>Disk Usage (current)</h4>
+    <table>
+      <thead><tr><th>Server</th><th style="text-align:right;">Disk</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for rank in metrics.top_disk %}
+        <tr>
+          <td>{{ rank.display }}</td>
+          <td style="text-align:right;">{{ rank.value }}%</td>
+          <td>
+            {% if rank.value > 85 %}<span class="badge badge-alert">Critical</span>
+            {% elif rank.value > 70 %}<span class="badge badge-warn">Warning</span>
+            {% else %}<span class="badge badge-ok">Normal</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if metrics.top_network %}
+  <div>
+    <h4>Network Throughput — RX+TX (avg)</h4>
+    <table>
+      <thead><tr><th>Server</th><th style="text-align:right;">Avg RX+TX</th></tr></thead>
+      <tbody>
+        {% for rank in metrics.top_network %}
+        <tr>
+          <td>{{ rank.display }}</td>
+          <td style="text-align:right;">{{ rank.value | bytes_human }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
 <!-- ============================================================ COLLECTION WARNINGS -->
 {% if metrics.errors %}
 <div class="callout">

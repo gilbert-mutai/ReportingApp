@@ -25,6 +25,17 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class ServerRank:
+    """One server's metric value for ranking tables."""
+    instance: str
+    value: float
+
+    @property
+    def display(self) -> str:
+        return self.instance.split(":")[0] if ":" in self.instance else self.instance
+
+
+@dataclass
 class MetricSample:
     timestamp: float
     value: float
@@ -68,6 +79,11 @@ class ServerMetrics:
     network_tx_bytes: float = 0.0
     period_label: str = "weekly"
     errors: List[str] = field(default_factory=list)
+    # Per-server rankings (sorted descending by value)
+    top_cpu: List[ServerRank] = field(default_factory=list)
+    top_memory: List[ServerRank] = field(default_factory=list)
+    top_disk: List[ServerRank] = field(default_factory=list)
+    top_network: List[ServerRank] = field(default_factory=list)
 
     def add_error(self, msg: str) -> None:
         self.errors.append(msg)
@@ -208,7 +224,6 @@ class PrometheusClient:
     # ------------------------------------------------------------------
 
     def _collect_cpu(self, m: ServerMetrics, start: float, end: float) -> None:
-        # Node exporter: CPU usage across all modes except idle
         promql = (
             '100 - (avg by(instance) '
             '(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)'
@@ -218,6 +233,12 @@ class PrometheusClient:
             all_vals = [v for s in series for v in s.values]
             m.cpu_avg = round(sum(all_vals) / len(all_vals), 2) if all_vals else 0.0
             m.cpu_max = round(max(all_vals), 2) if all_vals else 0.0
+            rankings = [
+                ServerRank(instance=s.labels.get("instance", "unknown"),
+                           value=round(s.avg, 1))
+                for s in series if s.avg is not None
+            ]
+            m.top_cpu = sorted(rankings, key=lambda r: r.value, reverse=True)
         else:
             m.add_error("CPU metrics unavailable")
 
@@ -231,6 +252,12 @@ class PrometheusClient:
             all_vals = [v for s in series for v in s.values]
             m.memory_avg = round(sum(all_vals) / len(all_vals), 2) if all_vals else 0.0
             m.memory_max = round(max(all_vals), 2) if all_vals else 0.0
+            rankings = [
+                ServerRank(instance=s.labels.get("instance", "unknown"),
+                           value=round(s.avg, 1))
+                for s in series if s.avg is not None
+            ]
+            m.top_memory = sorted(rankings, key=lambda r: r.value, reverse=True)
         else:
             m.add_error("Memory metrics unavailable")
 
@@ -239,9 +266,19 @@ class PrometheusClient:
             '100 - (node_filesystem_avail_bytes{mountpoint="/"} '
             '/ node_filesystem_size_bytes{mountpoint="/"} * 100)'
         )
-        val = self.scalar(promql)
-        if val is not None:
-            m.disk_usage = round(val, 2)
+        results = self.query(promql)
+        if results:
+            rankings = []
+            for r in results:
+                try:
+                    val = float(r["value"][1])
+                    instance = r["metric"].get("instance", "unknown")
+                    rankings.append(ServerRank(instance=instance, value=round(val, 1)))
+                except (KeyError, IndexError, ValueError):
+                    pass
+            if rankings:
+                m.disk_usage = round(max(r.value for r in rankings), 2)
+                m.top_disk = sorted(rankings, key=lambda r: r.value, reverse=True)
         else:
             m.add_error("Disk usage metrics unavailable")
 
@@ -297,3 +334,19 @@ class PrometheusClient:
             m.network_tx_bytes = round(sum(vals) / len(vals), 2) if vals else 0.0
         else:
             m.add_error("Network TX metrics unavailable")
+
+        # Per-server total throughput ranking (RX + TX combined)
+        net_promql = (
+            'sum by(instance) ('
+            '  rate(node_network_receive_bytes_total{device!="lo"}[5m])'
+            '  + rate(node_network_transmit_bytes_total{device!="lo"}[5m])'
+            ')'
+        )
+        net_series = self.query_range(net_promql, start, end)
+        if net_series:
+            rankings = [
+                ServerRank(instance=s.labels.get("instance", "unknown"),
+                           value=round(s.avg, 2))
+                for s in net_series if s.avg is not None
+            ]
+            m.top_network = sorted(rankings, key=lambda r: r.value, reverse=True)
