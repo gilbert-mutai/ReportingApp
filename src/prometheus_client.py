@@ -35,6 +35,17 @@ class ServerRank:
         return self.instance.split(":")[0] if ":" in self.instance else self.instance
 
 
+def _dedupe_rankings(rankings: List["ServerRank"]) -> List["ServerRank"]:
+    """One row per IP address. If the same IP appears multiple times
+    (e.g. scraped under two Prometheus jobs) keep the highest value."""
+    best: dict = {}
+    for rank in rankings:
+        ip = rank.display
+        if ip not in best or rank.value > best[ip].value:
+            best[ip] = rank
+    return sorted(best.values(), key=lambda r: r.value, reverse=True)
+
+
 @dataclass
 class MetricSample:
     timestamp: float
@@ -238,7 +249,7 @@ class PrometheusClient:
                            value=round(s.avg, 1))
                 for s in series if s.avg is not None
             ]
-            m.top_cpu = sorted(rankings, key=lambda r: r.value, reverse=True)
+            m.top_cpu = _dedupe_rankings(rankings)
         else:
             m.add_error("CPU metrics unavailable")
 
@@ -257,7 +268,7 @@ class PrometheusClient:
                            value=round(s.avg, 1))
                 for s in series if s.avg is not None
             ]
-            m.top_memory = sorted(rankings, key=lambda r: r.value, reverse=True)
+            m.top_memory = _dedupe_rankings(rankings)
         else:
             m.add_error("Memory metrics unavailable")
 
@@ -277,8 +288,9 @@ class PrometheusClient:
                 except (KeyError, IndexError, ValueError):
                     pass
             if rankings:
-                m.disk_usage = round(max(r.value for r in rankings), 2)
-                m.top_disk = sorted(rankings, key=lambda r: r.value, reverse=True)
+                deduped = _dedupe_rankings(rankings)
+                m.disk_usage = round(deduped[0].value, 2) if deduped else 0.0
+                m.top_disk = deduped
         else:
             m.add_error("Disk usage metrics unavailable")
 
@@ -349,4 +361,4 @@ class PrometheusClient:
                            value=round(s.avg, 2))
                 for s in net_series if s.avg is not None
             ]
-            m.top_network = sorted(rankings, key=lambda r: r.value, reverse=True)
+            m.top_network = _dedupe_rankings(rankings)
