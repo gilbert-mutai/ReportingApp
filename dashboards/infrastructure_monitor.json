@@ -42,7 +42,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "count(up{job=~\".*node.*\"})",
+          "expr": "count(count by(instance) (node_cpu_seconds_total))",
           "instant": true,
           "legendFormat": "Total",
           "refId": "A"
@@ -76,7 +76,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "count(up{job=~\".*node.*\"} == 1)",
+          "expr": "count(count by(instance) (node_cpu_seconds_total))",
           "instant": true,
           "legendFormat": "Online",
           "refId": "A"
