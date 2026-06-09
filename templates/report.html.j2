@@ -486,6 +486,64 @@
 </div>
 {% endif %}
 
+<!-- ============================================================ SERVER CAPACITY DETAILS -->
+{% if metrics.servers %}
+<h3>Server Capacity Details</h3>
+{% for server in metrics.servers %}
+<div style="page-break-inside:avoid; margin-bottom:20px;">
+  <h4>{{ server.display }}</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Resource</th>
+        <th style="text-align:right;">Used</th>
+        <th style="text-align:right;">Total</th>
+        <th style="text-align:right;">Usage %</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>CPU</td>
+        <td style="text-align:right;">—</td>
+        <td style="text-align:right;">—</td>
+        <td style="text-align:right;">{{ server.cpu_pct }}%</td>
+        <td>
+          {% if server.cpu_pct > 80 %}<span class="badge badge-alert">Critical</span>
+          {% elif server.cpu_pct > 60 %}<span class="badge badge-warn">Warning</span>
+          {% else %}<span class="badge badge-ok">Normal</span>{% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td>RAM</td>
+        <td style="text-align:right;">{{ server.ram_used_bytes | bytes_gb }}</td>
+        <td style="text-align:right;">{{ server.ram_total_bytes | bytes_gb }}</td>
+        <td style="text-align:right;">{{ server.ram_pct }}%</td>
+        <td>
+          {% if server.ram_pct > 85 %}<span class="badge badge-alert">Critical</span>
+          {% elif server.ram_pct > 70 %}<span class="badge badge-warn">Warning</span>
+          {% else %}<span class="badge badge-ok">Normal</span>{% endif %}
+        </td>
+      </tr>
+      {% for p in server.partitions %}
+      <tr>
+        <td>Disk {{ p.mountpoint }}</td>
+        <td style="text-align:right;">{{ p.used_bytes | bytes_gb }}</td>
+        <td style="text-align:right;">{{ p.total_bytes | bytes_gb }}</td>
+        <td style="text-align:right;">{{ p.pct }}%</td>
+        <td>
+          {% if p.pct > 85 %}<span class="badge badge-alert">Critical</span>
+          {% elif p.pct > 70 %}<span class="badge badge-warn">Warning</span>
+          {% else %}<span class="badge badge-ok">Normal</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endfor %}
+{% endif %}
+
 <!-- ============================================================ COLLECTION WARNINGS -->
 {% if metrics.errors %}
 <div class="callout">

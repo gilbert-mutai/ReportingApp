@@ -39,6 +39,14 @@ def _bytes_to_human(nbytes: float) -> str:
     return f"{nbytes:.1f} TB/s"
 
 
+def _bytes_to_gb(nbytes: float) -> str:
+    """Format a byte count as GB or TB (for storage/RAM display)."""
+    gb = nbytes / (1024 ** 3)
+    if gb >= 1024:
+        return f"{gb / 1024:.1f} TB"
+    return f"{gb:.1f} GB"
+
+
 class HtmlGenerator:
     def __init__(self, cfg: ReportConfig, templates_dir: Path):
         self._cfg = cfg
@@ -48,6 +56,7 @@ class HtmlGenerator:
         )
         env.filters["b64image"] = lambda p: _b64_image(Path(p))
         env.filters["bytes_human"] = _bytes_to_human
+        env.filters["bytes_gb"] = _bytes_to_gb
         self._template = env.get_template("report.html.j2")
 
     def render(

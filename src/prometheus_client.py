@@ -35,6 +35,30 @@ class ServerRank:
         return self.instance.split(":")[0] if ":" in self.instance else self.instance
 
 
+@dataclass
+class PartitionInfo:
+    """Disk partition capacity for one server."""
+    mountpoint: str
+    used_bytes: float
+    total_bytes: float
+    pct: float
+
+
+@dataclass
+class ServerDetail:
+    """Full capacity snapshot for one server (current instant values)."""
+    instance: str
+    cpu_pct: float
+    ram_used_bytes: float
+    ram_total_bytes: float
+    ram_pct: float
+    partitions: List[PartitionInfo] = field(default_factory=list)
+
+    @property
+    def display(self) -> str:
+        return self.instance.split(":")[0] if ":" in self.instance else self.instance
+
+
 def _dedupe_rankings(rankings: List["ServerRank"]) -> List["ServerRank"]:
     """One row per IP address. If the same IP appears multiple times
     (e.g. scraped under two Prometheus jobs) keep the highest value."""
@@ -95,6 +119,7 @@ class ServerMetrics:
     top_memory: List[ServerRank] = field(default_factory=list)
     top_disk: List[ServerRank] = field(default_factory=list)
     top_network: List[ServerRank] = field(default_factory=list)
+    servers: List[ServerDetail] = field(default_factory=list)
 
     def add_error(self, msg: str) -> None:
         self.errors.append(msg)
@@ -227,6 +252,7 @@ class PrometheusClient:
         self._collect_uptime(metrics, start, now, duration_seconds)
         self._collect_load(metrics)
         self._collect_network(metrics, start, now)
+        self._collect_server_details(metrics)
 
         return metrics
 
@@ -362,3 +388,87 @@ class PrometheusClient:
                 for s in net_series if s.avg is not None
             ]
             m.top_network = _dedupe_rankings(rankings)
+
+    def _collect_server_details(self, m: ServerMetrics) -> None:
+        """Per-server capacity snapshot: CPU %, RAM used/total, disk per partition."""
+        cpu_results = self.query(
+            '100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)'
+        )
+        ram_total_results = self.query("node_memory_MemTotal_bytes")
+        ram_used_results = self.query(
+            "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes"
+        )
+        disk_size_results = self.query(
+            'node_filesystem_size_bytes{fstype!~"tmpfs|overlay|aufs|squashfs|devtmpfs"}'
+        )
+        disk_avail_results = self.query(
+            'node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|aufs|squashfs|devtmpfs"}'
+        )
+
+        def _scalar_map(results) -> Dict[str, float]:
+            out: Dict[str, float] = {}
+            for r in results:
+                instance = r["metric"].get("instance", "unknown")
+                try:
+                    out[instance] = float(r["value"][1])
+                except (KeyError, IndexError, ValueError):
+                    pass
+            return out
+
+        cpu_map = _scalar_map(cpu_results)
+        ram_total_map = _scalar_map(ram_total_results)
+        ram_used_map = _scalar_map(ram_used_results)
+
+        disk_size_map: Dict[str, Dict[str, float]] = {}
+        for r in disk_size_results:
+            instance = r["metric"].get("instance", "unknown")
+            mountpoint = r["metric"].get("mountpoint", "/")
+            try:
+                disk_size_map.setdefault(instance, {})[mountpoint] = float(r["value"][1])
+            except (KeyError, IndexError, ValueError):
+                pass
+
+        disk_avail_map: Dict[str, Dict[str, float]] = {}
+        for r in disk_avail_results:
+            instance = r["metric"].get("instance", "unknown")
+            mountpoint = r["metric"].get("mountpoint", "/")
+            try:
+                disk_avail_map.setdefault(instance, {})[mountpoint] = float(r["value"][1])
+            except (KeyError, IndexError, ValueError):
+                pass
+
+        seen_ips: Dict[str, ServerDetail] = {}
+        for instance in sorted(set(cpu_map) | set(ram_total_map)):
+            ip = instance.split(":")[0] if ":" in instance else instance
+            if ip in seen_ips:
+                continue
+
+            ram_total = ram_total_map.get(instance, 0.0)
+            ram_used = ram_used_map.get(instance, 0.0)
+            ram_pct = round(ram_used / ram_total * 100, 1) if ram_total > 0 else 0.0
+
+            partitions: List[PartitionInfo] = []
+            size_map = disk_size_map.get(instance, {})
+            avail_map = disk_avail_map.get(instance, {})
+            for mountpoint in sorted(size_map.keys()):
+                size = size_map[mountpoint]
+                avail = avail_map.get(mountpoint, 0.0)
+                used = size - avail
+                pct = round(used / size * 100, 1) if size > 0 else 0.0
+                partitions.append(PartitionInfo(
+                    mountpoint=mountpoint,
+                    used_bytes=round(used),
+                    total_bytes=round(size),
+                    pct=pct,
+                ))
+
+            seen_ips[ip] = ServerDetail(
+                instance=instance,
+                cpu_pct=round(cpu_map.get(instance, 0.0), 1),
+                ram_used_bytes=round(ram_used),
+                ram_total_bytes=round(ram_total),
+                ram_pct=ram_pct,
+                partitions=partitions,
+            )
+
+        m.servers = sorted(seen_ips.values(), key=lambda s: s.display)
