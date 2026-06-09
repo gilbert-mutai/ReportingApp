@@ -193,7 +193,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
       "id": 6,
-      "title": "CPU",
+      "title": "Top Consumers",
       "type": "row"
     },
 
@@ -201,61 +201,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "showPoints": "never",
-            "spanNulls": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 80 }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 6 },
-      "id": 7,
-      "options": {
-        "legend": {
-          "calcs": ["mean", "max"],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
-          "legendFormat": "{{instance}}",
-          "refId": "A"
-        }
-      ],
-      "title": "CPU Usage per Server",
-      "type": "timeseries"
-    },
-
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
           "color": { "mode": "thresholds" },
-          "custom": {
-            "align": "auto",
-            "cellOptions": { "type": "color-background", "mode": "gradient" },
-            "inspect": false,
-            "minWidth": 50
-          },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -267,18 +213,199 @@
           },
           "unit": "percent"
         },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 6 },
+      "id": 7,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "topk(1, 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100))",
+          "instant": true,
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Highest CPU",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 85 }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 6 },
+      "id": 8,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "topk(1, 100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)))",
+          "instant": true,
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Highest RAM Usage",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 85 }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 6 },
+      "id": 9,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "topk(1, 100 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"} * 100))",
+          "instant": true,
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Highest Disk Usage",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10000000 },
+              { "color": "red", "value": 100000000 }
+            ]
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 6 },
+      "id": 10,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "topk(1, sum by(instance) (rate(node_network_receive_bytes_total{device!=\"lo\"}[5m]) + rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])))",
+          "instant": true,
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Highest Network Throughput",
+      "type": "stat"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 11 },
+      "id": 11,
+      "title": "Server Rankings",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 80 }
+            ]
+          }
+        },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Server" },
+            "matcher": { "id": "byName", "options": "CPU %" },
             "properties": [
-              { "id": "custom.cellOptions", "value": { "type": "auto" } },
-              { "id": "custom.width", "value": 180 }
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "gradient" } },
+              { "id": "unit", "value": "percent" },
+              { "id": "custom.width", "value": 100 }
             ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Server" },
+            "properties": [ { "id": "custom.width", "value": 200 } ]
           }
         ]
       },
-      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 6 },
-      "id": 8,
+      "gridPos": { "h": 12, "w": 12, "x": 0, "y": 12 },
+      "id": 12,
       "options": {
         "cellHeight": "sm",
         "footer": { "show": false },
@@ -294,7 +421,7 @@
           "refId": "A"
         }
       ],
-      "title": "Current CPU % per Server",
+      "title": "CPU Ranking — High to Low",
       "transformations": [
         { "id": "labelsToFields", "options": { "mode": "rows" } },
         {
@@ -309,55 +436,6 @@
     },
 
     {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
-      "id": 9,
-      "title": "Memory",
-      "type": "row"
-    },
-
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "showPoints": "never",
-            "spanNulls": false
-          },
-          "mappings": [],
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 16 },
-      "id": 10,
-      "options": {
-        "legend": {
-          "calcs": ["mean", "max"],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))",
-          "legendFormat": "{{instance}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Memory Usage per Server",
-      "type": "timeseries"
-    },
-
-    {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "fieldConfig": {
         "defaults": {
@@ -365,8 +443,7 @@
           "custom": {
             "align": "auto",
             "cellOptions": { "type": "auto" },
-            "inspect": false,
-            "minWidth": 50
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -383,28 +460,26 @@
             "matcher": { "id": "byName", "options": "RAM %" },
             "properties": [
               { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "gradient" } },
-              { "id": "unit", "value": "percent" }
+              { "id": "unit", "value": "percent" },
+              { "id": "custom.width", "value": 100 }
             ]
           },
           {
             "matcher": { "id": "byName", "options": "Used" },
-            "properties": [{ "id": "unit", "value": "bytes" }]
+            "properties": [ { "id": "unit", "value": "bytes" } ]
           },
           {
             "matcher": { "id": "byName", "options": "Total" },
-            "properties": [{ "id": "unit", "value": "bytes" }]
+            "properties": [ { "id": "unit", "value": "bytes" } ]
           },
           {
             "matcher": { "id": "byName", "options": "Server" },
-            "properties": [
-              { "id": "custom.cellOptions", "value": { "type": "auto" } },
-              { "id": "custom.width", "value": 180 }
-            ]
+            "properties": [ { "id": "custom.width", "value": 200 } ]
           }
         ]
       },
-      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 16 },
-      "id": 11,
+      "gridPos": { "h": 12, "w": 12, "x": 12, "y": 12 },
+      "id": 13,
       "options": {
         "cellHeight": "sm",
         "footer": { "show": false },
@@ -434,7 +509,7 @@
           "refId": "C"
         }
       ],
-      "title": "RAM Used / Total per Server",
+      "title": "RAM Ranking — High to Low",
       "transformations": [
         { "id": "merge", "options": {} },
         {
@@ -454,14 +529,6 @@
     },
 
     {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
-      "id": 12,
-      "title": "Disk",
-      "type": "row"
-    },
-
-    {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "fieldConfig": {
         "defaults": {
@@ -469,8 +536,7 @@
           "custom": {
             "align": "auto",
             "cellOptions": { "type": "auto" },
-            "inspect": false,
-            "minWidth": 50
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -487,35 +553,30 @@
             "matcher": { "id": "byName", "options": "Usage %" },
             "properties": [
               { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "gradient" } },
-              { "id": "unit", "value": "percent" }
+              { "id": "unit", "value": "percent" },
+              { "id": "custom.width", "value": 100 }
             ]
           },
           {
             "matcher": { "id": "byName", "options": "Used" },
-            "properties": [{ "id": "unit", "value": "bytes" }]
+            "properties": [ { "id": "unit", "value": "bytes" } ]
           },
           {
             "matcher": { "id": "byName", "options": "Total" },
-            "properties": [{ "id": "unit", "value": "bytes" }]
+            "properties": [ { "id": "unit", "value": "bytes" } ]
           },
           {
             "matcher": { "id": "byName", "options": "Server" },
-            "properties": [
-              { "id": "custom.cellOptions", "value": { "type": "auto" } },
-              { "id": "custom.width", "value": 180 }
-            ]
+            "properties": [ { "id": "custom.width", "value": 180 } ]
           },
           {
             "matcher": { "id": "byName", "options": "Mount" },
-            "properties": [
-              { "id": "custom.cellOptions", "value": { "type": "auto" } },
-              { "id": "custom.width", "value": 150 }
-            ]
+            "properties": [ { "id": "custom.width", "value": 120 } ]
           }
         ]
       },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 26 },
-      "id": 13,
+      "gridPos": { "h": 12, "w": 12, "x": 0, "y": 24 },
+      "id": 14,
       "options": {
         "cellHeight": "sm",
         "footer": { "show": false },
@@ -545,7 +606,7 @@
           "refId": "C"
         }
       ],
-      "title": "Disk Usage per Server / Partition",
+      "title": "Disk Ranking — High to Low (All Partitions)",
       "transformations": [
         { "id": "merge", "options": {} },
         {
@@ -567,92 +628,216 @@
     },
 
     {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10000000 },
+              { "color": "red", "value": 100000000 }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "RX+TX" },
+            "properties": [
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "gradient" } },
+              { "id": "unit", "value": "Bps" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Server" },
+            "properties": [ { "id": "custom.width", "value": 200 } ]
+          }
+        ]
+      },
+      "gridPos": { "h": 12, "w": 12, "x": 12, "y": 24 },
+      "id": 15,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "RX+TX" }]
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by(instance) (rate(node_network_receive_bytes_total{device!=\"lo\"}[5m]) + rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m]))",
+          "instant": true,
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Network Ranking — High to Low",
+      "transformations": [
+        { "id": "labelsToFields", "options": { "mode": "rows" } },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "job": true },
+            "renameByName": { "instance": "Server", "Value": "RX+TX" }
+          }
+        }
+      ],
+      "type": "table"
+    },
+
+    {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 36 },
-      "id": 14,
-      "title": "Network",
+      "id": 16,
+      "title": "Trends — Last 7 Days",
       "type": "row"
     },
 
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Stacked area — each band is one server. Hover for individual values. Legend table ranks servers by mean CPU.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 65,
+            "gradientMode": "none",
             "lineInterpolation": "smooth",
-            "lineWidth": 2,
+            "lineWidth": 0,
+            "pointSize": 5,
             "showPoints": "never",
-            "spanNulls": false
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "normal" }
           },
           "mappings": [],
-          "unit": "Bps"
+          "unit": "percent"
         },
         "overrides": []
       },
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 37 },
-      "id": 15,
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 37 },
+      "id": 17,
       "options": {
         "legend": {
           "calcs": ["mean", "max"],
           "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by(instance) (rate(node_network_receive_bytes_total{device!=\"lo\"}[5m]))",
+          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
-      "title": "Network RX per Server",
+      "title": "CPU Utilisation — Last 7 Days (Stacked)",
       "type": "timeseries"
     },
 
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Stacked area — each band is one server. Hover for individual values. Legend table ranks servers by mean memory.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 65,
+            "gradientMode": "none",
             "lineInterpolation": "smooth",
-            "lineWidth": 2,
+            "lineWidth": 0,
+            "pointSize": 5,
             "showPoints": "never",
-            "spanNulls": false
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "normal" }
           },
           "mappings": [],
-          "unit": "Bps"
+          "unit": "percent"
         },
         "overrides": []
       },
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 37 },
-      "id": 16,
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 49 },
+      "id": 18,
       "options": {
         "legend": {
           "calcs": ["mean", "max"],
           "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by(instance) (rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m]))",
+          "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
-      "title": "Network TX per Server",
+      "title": "Memory Utilisation — Last 7 Days (Stacked)",
+      "type": "timeseries"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Stacked area — each band is one server's combined RX+TX. Legend table ranks servers by mean throughput.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 65,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 0,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "normal" }
+          },
+          "mappings": [],
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 61 },
+      "id": 19,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
+        },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by(instance) (rate(node_network_receive_bytes_total{device!=\"lo\"}[5m]) + rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m]))",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Network Throughput — Last 7 Days (Stacked)",
       "type": "timeseries"
     }
 
@@ -681,5 +866,5 @@
   "timezone": "browser",
   "title": "Infrastructure Monitor",
   "uid": "angani-infra-monitor",
-  "version": 1
+  "version": 2
 }
