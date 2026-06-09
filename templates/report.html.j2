@@ -556,19 +556,6 @@
 </div>
 {% endif %}
 
-<!-- ============================================================ DASHBOARD SCREENSHOTS -->
-{% if screenshots %}
-<h3>Dashboard (Current Metrics)</h3>
-{% for shot in screenshots %}
-<div class="screenshot-wrap">
-  <img src="{{ shot | b64image }}" alt="Grafana Dashboard Screenshot" />
-  <div class="screenshot-caption">
-    Live dashboard — {{ generated_at }}
-  </div>
-</div>
-{% endfor %}
-{% endif %}
-
 <!-- ============================================================ NOTES -->
 {% if notes %}
 <h3>Notes</h3>
